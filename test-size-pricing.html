@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Size-Based Pricing Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .size-buttons { display: flex; gap: 10px; margin: 20px 0; }
+        .size-btn { padding: 10px 20px; border: 2px solid #ccc; background: white; cursor: pointer; border-radius: 5px; }
+        .size-btn.active { border-color: #007bff; background: #e7f3ff; color: #007bff; }
+        .price-display { font-size: 24px; font-weight: bold; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 5px; }
+        .size-info { background: #007bff; color: white; padding: 5px 10px; border-radius: 3px; font-size: 12px; margin-left: 10px; }
+        .api-test { margin: 30px 0; padding: 20px; background: #f0f0f0; border-radius: 5px; }
+        .log { background: #000; color: #0f0; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Size-Based Pricing Test</h1>
+        <p><strong>Product:</strong> Test Rice Packet (ID: 44)</p>
+        
+        <div class="size-buttons">
+            <button class="size-btn" onclick="selectSize('1kg', 10, 12)">1kg</button>
+            <button class="size-btn" onclick="selectSize('3kg', 30, 35)">3kg</button>
+            <button class="size-btn" onclick="selectSize('5kg', 45, 50)">5kg</button>
+        </div>
+        
+        <div class="price-display" id="priceDisplay">
+            ₹10 <span class="size-info" id="sizeInfo" style="display: none;">Size: 1kg</span>
+        </div>
+        
+        <div class="api-test">
+            <h3>API Test</h3>
+            <button onclick="testAPI()">Test Backend API</button>
+            <button onclick="testSpecificSize()">Test 3kg Pricing</button>
+            <div class="log" id="apiLog">Click buttons above to test API...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentSize = '';
+        let currentPrice = 10;
+        
+        function selectSize(size, price, mrp) {
+            // Update UI
+            document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update price display
+            currentSize = size;
+            currentPrice = price;
+            
+            const priceDisplay = document.getElementById('priceDisplay');
+            const sizeInfo = document.getElementById('sizeInfo');
+            
+            priceDisplay.innerHTML = `₹${price} <span class="size-info">Size: ${size}</span>`;
+            
+            log(`Selected size: ${size}, Price updated to: ₹${price}`);
+        }
+        
+        async function testAPI() {
+            try {
+                log('Testing API: GET /api/products/44/pricing');
+                const response = await fetch('http://localhost:5001/api/products/44/pricing');
+                const data = await response.json();
+                
+                if (data.success) {
+                    log('✅ API Success!');
+                    log(`Base Price: ₹${data.product.basePrice}`);
+                    log(`Available sizes: ${data.sizes.length}`);
+                    data.sizes.forEach(size => {
+                        log(`  ${size.size_value}: ₹${size.calculatedPrice} (MRP: ₹${size.calculatedMrp})`);
+                    });
+                } else {
+                    log('❌ API Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                log('❌ Network Error: ' + error.message);
+            }
+        }
+        
+        async function testSpecificSize() {
+            try {
+                log('Testing API: GET /api/products/44/pricing?sizeValue=3kg');
+                const response = await fetch('http://localhost:5001/api/products/44/pricing?sizeValue=3kg');
+                const data = await response.json();
+                
+                if (data.success && data.selectedSize) {
+                    log('✅ Size-specific API Success!');
+                    log(`3kg Price: ₹${data.selectedSize.calculatedPrice}`);
+                    log(`3kg MRP: ₹${data.selectedSize.calculatedMrp}`);
+                } else {
+                    log('❌ Size-specific API Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                log('❌ Network Error: ' + error.message);
+            }
+        }
+        
+        function log(message) {
+            const logDiv = document.getElementById('apiLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // Auto-test on page load
+        window.onload = function() {
+            log('Page loaded. Testing backend API...');
+            testAPI();
+        };
+    </script>
+</body>
+</html>

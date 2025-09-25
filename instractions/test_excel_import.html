@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Excel Import</title>
+</head>
+<body>
+    <h1>Test Excel Import</h1>
+    
+    <form id="importForm">
+        <input type="file" id="excelFile" accept=".xlsx,.xls" required>
+        <button type="submit">Import Excel</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('importForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('excelFile');
+            const resultDiv = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<p style="color: red;">Please select a file</p>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('excel', fileInput.files[0]);
+            
+            try {
+                resultDiv.innerHTML = '<p>Importing...</p>';
+                
+                const response = await fetch('http://localhost:5001/api/products/import-excel', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>Import Results:</h3>
+                        <p>Success: ${data.success}</p>
+                        <p>Total: ${data.results?.total || 0}</p>
+                        <p>Successful: ${data.results?.successful || 0}</p>
+                        <p>Failed: ${data.results?.failed || 0}</p>
+                        ${data.results?.errors?.length > 0 ? 
+                            '<h4>Errors:</h4><ul>' + 
+                            data.results.errors.map(err => `<li>Row ${err.row}: ${err.error}</li>`).join('') + 
+                            '</ul>' : ''
+                        }
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.message || 'Import failed'}</p>`;
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
